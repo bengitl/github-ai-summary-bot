@@ -1,12 +1,9 @@
 {
   "version": 2,
   "functions": {
-    "api/webhook.js": {
-      "maxDuration": 10,
-      "memory": 256
+    "api/*.js": {
+      "memory": 256,
+      "maxDuration": 10
     }
-  },
-  "routes": [
-    { "src": "/api/(.*)", "dest": "/api/$1.js" }
-  ]
+  }
 }
