@@ -1,48 +1,30 @@
-import { Webhooks } from "@octokit/webhooks";
-import axios from "axios";
+const { Webhooks } = require("@octokit/webhooks");
 
 const webhooks = new Webhooks({
-  secret: process.env.GITHUB_WEBHOOK_SECRET
+  secret: process.env.GITHUB_WEBHOOK_SECRET || "test-secret",
 });
 
-webhooks.on("pull_request.opened", async ({ payload }) => {
-  const pr = payload.pull_request;
-  const diffUrl = pr.diff_url;
-
-  const diff = await axios.get(diffUrl).then(r => r.data);
-
-  const summary = await axios.post("https://api-inference.modelscope.cn/v1/chat/completions", {
-    model: "qwen-turbo",
-    messages: [{ role: "user", content: "Summarize this diff:\n" + diff }]
-  }).then(r => r.data.choices[0].message.content);
-
-  await axios.post(
-    payload.repository.comments_url.replace("{/number}", ""),
-    { body: "🤖 **AI Summary**:\n" + summary },
-    { headers: { Authorization: `token ${process.env.GITHUB_APP_TOKEN}` } }
-  );
-});
-
-export default async function handler(req, res) {
+module.exports = async (req, res) => {
   try {
+    // 读取原始 body（Vercel 不会自动解析）
+    const buffers = [];
+    for await (const chunk of req) buffers.push(chunk);
+    const rawBody = Buffer.concat(buffers).toString("utf8");
+
+    const id = req.headers["x-github-delivery"];
+    const name = req.headers["x-github-event"];
+    const signature = req.headers["x-hub-signature-256"];
+
     await webhooks.verifyAndReceive({
-      id: req.headers["x-github-delivery"],
-      name: req.headers["x-github-event"],
-      signature: req.headers["x-hub-signature-256"],
-      payload: req.body
+      id,
+      name,
+      payload: JSON.parse(rawBody),
+      signature,
     });
 
-    res.status(200).send("OK");
-  } catch (e) {
-    console.error(e);
-    res.status(400).send("Webhook Error");
+    res.status(200).json({ success: true });
+  } catch (err) {
+    console.error("Webhook error:", err);
+    res.status(500).json({ error: err.message });
   }
-}
-export default async function handler(req, res) {
-  if (req.method !== "POST") {
-    return res.status(200).send("OK (POST required)");
-  }
-
-  console.log("Received:", req.body);
-  res.status(200).json({ received: true });
-}
+};
