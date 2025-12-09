@@ -1,9 +1,6 @@
 {
-  "version": 2,
-  "functions": {
-    "api/*.js": {
-      "memory": 256,
-      "maxDuration": 10
-    }
+  "type": "module",
+  "dependencies": {
+    "axios": "^1.6.7"
   }
 }
