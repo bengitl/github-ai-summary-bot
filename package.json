@@ -1,13 +1,14 @@
 
 {
-  "name": "github-ai-bot-express",
+  "name": "github-ai-bot",
   "version": "1.0.0",
   "main": "api/index.js",
-  "scripts": {
-    "start": "node api/index.js"
-  },
+  "type": "module",
   "dependencies": {
-    "express": "^4.19.2",
-    "axios": "^1.6.7"
+    "express": "latest",
+    "body-parser": "latest",
+    "@octokit/rest": "latest",
+    "node-fetch": "latest",
+    "js-yaml": "latest"
   }
 }
