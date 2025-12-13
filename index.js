@@ -6,20 +6,30 @@ import { aiReply } from "./utils/ai.js";
 import { ghComment, ghLabel } from "./utils/github.js";
 
 const app = express();
-app.use(express.json({ limit: "20mb" }));
 
+app.use(
+  express.json({
+    verify: (req, res, buf) => {
+      req.rawBody = buf;
+    },
+  })
+);
 const SECRET = process.env.GITHUB_WEBHOOK_SECRET;
 const TOKEN = process.env.GITHUB_TOKEN;
 
 // -------------------- Signature Verify --------------------
 function verifySignature(req) {
   const signature = req.headers["x-hub-signature-256"];
-  const body = JSON.stringify(req.body);
-  const digest =
-    "sha256=" +
-    crypto.createHmac("sha256", SECRET).update(body).digest("hex");
+  if (!signature || !req.rawBody) return false;
 
-  return signature === digest;
+  const hmac = crypto.createHmac("sha256", SECRET);
+  const digest =
+    "sha256=" + hmac.update(req.rawBody).digest("hex");
+
+  return crypto.timingSafeEqual(
+    Buffer.from(signature),
+    Buffer.from(digest)
+  );
 }
 
 // -------------------- Webhook Handler --------------------
