@@ -1,19 +1,28 @@
 import axios from "axios";
 
-const TOKEN = process.env.GITHUB_TOKEN;
-
 export async function ghComment(url, body) {
-  await axios.post(
-    url,
-    { body },
-    { headers: { Authorization: `token ${TOKEN}` } }
-  );
+  if (!url || typeof url !== "string") {
+    console.error("❌ Invalid GitHub comment URL:", url);
+    return;
+  }
+
+  try {
+    await axios.post(
+      url,
+      { body },
+      {
+        headers: {
+          Authorization: `token ${process.env.GITHUB_TOKEN}`,
+          Accept: "application/vnd.github+json",
+          "User-Agent": "github-ai-bot"
+        }
+      }
+    );
+  } catch (err) {
+    console.error(
+      "❌ GitHub comment failed:",
+      err.response?.data || err.message
+    );
+  }
 }
 
-export async function ghLabel(repo, number, labels) {
-  await axios.post(
-    `https://api.github.com/repos/${repo}/issues/${number}/labels`,
-    { labels },
-    { headers: { Authorization: `token ${TOKEN}` } }
-  );
-}
