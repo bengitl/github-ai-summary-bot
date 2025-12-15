@@ -1,15 +1,33 @@
 import axios from "axios";
 
 export async function ghComment(url, body) {
-  if (!url || typeof url !== "string") {
-    console.error("❌ Invalid GitHub comment URL:", url);
-    return;
-  }
+  if (!url) return;
+
+  await axios.post(
+    url,
+    { body },
+    {
+      headers: {
+        Authorization: `token ${process.env.GITHUB_TOKEN}`,
+        Accept: "application/vnd.github+json",
+        "User-Agent": "github-ai-bot"
+      }
+    }
+  );
+}
+
+/**
+ * 给 Issue / PR 自动打标签
+ */
+export async function ghLabel(owner, repo, issueNumber, labels = []) {
+  if (!owner || !repo || !issueNumber || labels.length === 0) return;
+
+  const url = `https://api.github.com/repos/${owner}/${repo}/issues/${issueNumber}/labels`;
 
   try {
     await axios.post(
       url,
-      { body },
+      { labels },
       {
         headers: {
           Authorization: `token ${process.env.GITHUB_TOKEN}`,
@@ -19,10 +37,7 @@ export async function ghComment(url, body) {
       }
     );
   } catch (err) {
-    console.error(
-      "❌ GitHub comment failed:",
-      err.response?.data || err.message
-    );
+    console.error("❌ Label failed:", err.response?.data || err.message);
   }
 }
 
