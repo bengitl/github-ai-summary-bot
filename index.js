@@ -33,60 +33,32 @@ function verifySignature(req) {
 }
 
 // -------------------- Webhook Handler --------------------
-app.post("/api/webhook", async (req, res) => {
-  if (!verifySignature(req)) {
-    return res.status(401).send("Invalid signature");
-  }
-
-  const event = req.headers["x-github-event"];
-  const body = req.body;
-
+app.post("/webhook", async (req, res) => {
   try {
-    // Issue 自动回复 + Label
-    if (event === "issues" && body.action === "opened") {
-      const issue = body.issue;
-
-      const reply = await aiReply(
-        `请给这条 Issue 生成正式、客观、有帮助的回复。\n标题: ${issue.title}\n内容:\n${issue.body}`
-      );
-
-      await ghComment(issue.comments_url, reply);
-      await ghLabel(body.repository.full_name, issue.number, ["ai-response"]);
+    if (!verifySignature(req)) {
+      return res.status(401).send("Invalid signature");
     }
 
-    // PR 自动解析 + 总结 + 审查
-    if (event === "pull_request" && body.action === "opened") {
-      const pr = body.pull_request;
+    const event = req.headers["x-github-event"];
+    const payload = req.body;
 
-      await ghComment(pr.comments_url, "AI 正在分析此 Pull Request，请稍候…");
+    console.log("✅ Event:", event, payload.action);
 
-      // 读取 diff
-      const diffText = await getDiff(pr.diff_url);
-
-      // 总结与审查
-      const diffSummary = await summarizeDiff(diffText);
-      const review = await aiReply(
-        `请审核此 Pull Request 并给出可执行建议:\n标题:${pr.title}\n描述:${pr.body}\n变更摘要:\n${diffSummary}`
-      );
-
-      await ghComment(pr.comments_url, `### AI 审查结果\n${review}`);
+    if (event === "issues" && payload.issue?.comments_url) {
+      await ghComment(payload.issue.comments_url, "🤖 Issue OK");
     }
 
-    // Review 评论自动回复
-    if (event === "pull_request_review_comment") {
-      const comment = body.comment;
-
-      const reply = await aiReply(
-        `请为以下代码 Review 评论生成一个专业、礼貌的 AI 回复:\n\n${comment.body}`
-      );
-
-      await ghComment(comment.url, reply);
+    if (event === "pull_request" && payload.pull_request?.number) {
+      const { owner, name } = payload.repository;
+      const pr = payload.pull_request;
+      const url = `https://api.github.com/repos/${owner.login}/${name}/issues/${pr.number}/comments`;
+      await ghComment(url, "🤖 PR OK");
     }
 
-    return res.status(200).send("OK");
+    res.status(200).send("OK");
   } catch (err) {
-    console.error(err);
-    return res.status(500).send("Server Error");
+    console.error("🔥 Webhook fatal error:", err);
+    res.status(200).send("OK"); // webhook 永远不要返回 500
   }
 });
 
