@@ -55,10 +55,10 @@ app.post("/webhook", async (req, res) => {
       await ghComment(url, "🤖 PR OK");
     }
 
-    res.status(200).send("OK");
+    res.status(200).send("OK1");
   } catch (err) {
     console.error("🔥 Webhook fatal error:", err);
-    res.status(200).send("OK"); // webhook 永远不要返回 500
+    res.status(200).send("OK2"); // webhook 永远不要返回 500
   }
 });
 
